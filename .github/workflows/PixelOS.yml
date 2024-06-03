@@ -1,6 +1,5 @@
 name: Pixel OS
 
-
 on:
 
     workflow_dispatch:
@@ -120,16 +119,23 @@ jobs:
           fi
           make O=out CC="ccache clang" CXX="ccache clang++" ARCH=arm64 -j`nproc` CROSS_COMPILE=$CLANG_PATH/bin/aarch64-linux-gnu- CROSS_COMPILE_ARM32=$CLANG_PATH/bin/arm-linux-gnueabi- LD=ld.lld 2>&1 | tee kernel.log
 
-      
+      - name: Compress Kernel Image
+        run: |
+          cd $GITHUB_WORKSPACE/kernel/out/arch/arm64/boot
+          if [ -f Image ]; then
+              gzip -c Image > Image.gz-dtb
+          fi
+
       - name: Create Anykernel3 file
         run: |
           cd $GITHUB_WORKSPACE/kernel
           export KERNEL_PATH=$PWD
           git clone https://gitlab.com/inferno0230/AnyKernel3 --depth=1 $KERNEL_PATH/AnyKernel3
-          if test -e $KERNEL_PATH/out/arch/arm64/boot/Image && test -d $KERNEL_PATH/AnyKernel3; then
+          if test -e $KERNEL_PATH/out/arch/arm64/boot/Image && test -e $KERNEL_PATH/out/arch/arm64/boot/Image.gz-dtb && test -d $KERNEL_PATH/AnyKernel3; then
              zip_name="PixelOS-martini-${{ env.TAG_NAME }}.zip"
              cd $KERNEL_PATH/AnyKernel3
              cp $KERNEL_PATH/out/arch/arm64/boot/Image $KERNEL_PATH/AnyKernel3
+             cp $KERNEL_PATH/out/arch/arm64/boot/Image.gz-dtb $KERNEL_PATH/AnyKernel3
              zip -r ${zip_name} *
              mv ${zip_name} $KERNEL_PATH/out/arch/arm64/boot
           fi
